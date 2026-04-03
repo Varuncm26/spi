@@ -95,7 +95,7 @@ This IRQ only starts the SPI transfer. It does not wait for data.
 3. Inside `mpu6500ReadData()` (the callback):
    - Copies `spiBufferRx` into `mpu->rxbuffer`
    - Combines the high and low bytes for each axis into 16-bit signed integers
-   - Calls `MPU6500_Update()` which feeds each raw value into its sliding window average (SWA) filter
+   - Calls `MPU6500_Update()` which feeds each raw value into the averaging filter
    - Increments the global sample counter `count`
    - When `count` reaches 5, it calls `softwareInterruptTrigger()` and resets `count` to 0
 
