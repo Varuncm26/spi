@@ -61,6 +61,65 @@ DMA2_Stream0_IRQHandler()
     └── Sets spiStatus = SPI_IDLE
 ```
 
+## Interrupt Handlers
+
+There are 3 interrupts that drive the entire data pipeline. They fire in order, one after the other.
+
+---
+
+### 1. EXTI0_IRQHandler — MPU-6500 Data Ready
+
+**Trigger:** The MPU-6500 pulls its INT pin high (PA0) every time a new sensor sample is ready inside the chip.
+
+**What it does:**
+1. Clears the EXTI0 pending flag
+2. Calls `mpu6500Read()` which builds a 15-byte TX buffer (register address + 14 dummy bytes) and hands it to `spiTransact()`
+3. `spiTransact()` loads the TX buffer into DMA, pulls CS low, and kicks off both the TX and RX DMA streams simultaneously
+4. Returns immediately — the actual data arrives later via the DMA interrupt
+
+This IRQ only starts the SPI transfer. It does not wait for data.
+
+---
+
+### 2. DMA2_Stream0_IRQHandler — SPI RX Transfer Complete
+
+**Trigger:** DMA2 Stream 0 fires when it has finished moving the incoming SPI bytes from the SPI data register into `spiBufferRx` in memory.
+
+**What it does:**
+1. Calls `spiProcessRx()`
+2. Inside `spiProcessRx()`:
+   - Clears the DMA transfer-complete flag
+   - Pulls CS high (ends the SPI transaction)
+   - Calls `rxCallBack()` — which is `mpu6500ReadData()`
+   - Sets `spiStatus = SPI_IDLE` so the next transaction can be accepted
+3. Inside `mpu6500ReadData()` (the callback):
+   - Copies `spiBufferRx` into `mpu->rxbuffer`
+   - Combines the high and low bytes for each axis into 16-bit signed integers
+   - Calls `MPU6500_Update()` which feeds each raw value into its sliding window average (SWA) filter
+   - Increments the global sample counter `count`
+   - When `count` reaches 5, it calls `softwareInterruptTrigger()` and resets `count` to 0
+
+This IRQ does the actual data parsing and filtering.
+
+---
+
+### 3. EXTI1_IRQHandler — Software Triggered, Averaged Data Ready
+
+**Trigger:** Not a hardware pin. `softwareInterruptTrigger()` writes to the EXTI software interrupt register (`LL_EXTI_GenerateSWI_0_31`) which immediately pends EXTI1 in the NVIC. This is called from inside `mpu6500ReadData()` once every 5 samples.
+
+**What it does:**
+1. Clears the EXTI1 pending flag
+2. Sets `flag = 1` in main
+3. The main loop checks `flag`, prints the latest averaged accelerometer, gyroscope, and temperature values via `printf`, then clears `flag`
+
+This IRQ is the bridge between the ISR context (where data is parsed) and the main loop (where data is printed). It fires at 1/5th the rate of EXTI0.
+
+---
+
+### Summary
+
+
+
 ##  MPU-6500 Setup Flow
 ,
 ### Initialization
