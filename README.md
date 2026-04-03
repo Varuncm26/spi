@@ -22,6 +22,7 @@ This project implements **SPI + DMA communication** with the MPU-6500 6-axis IMU
 | TIM5 | Free-running microsecond counter |
 
 MPU-6500: REGISTER MAP ->   https://www.glynstore.com/content/docs/invensense/RM-MPU-6555A.pdf
+
 MPU-6500: Datasheet -> https://datasheet.octopart.com/MPU-6500-InvenSense-datasheet-138896167.pdf
 
 ---
