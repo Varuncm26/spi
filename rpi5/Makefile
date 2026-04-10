@@ -1,34 +1,52 @@
-# Compiler settings
-CC = gcc
-CFLAGS = -Wall -Wextra -O2 -I.
+# Makefile — MPU6500 3D OpenCV Visualizer (Raspberry Pi 5)
+#
+# Install dependency first:
+#   sudo apt update && sudo apt install libopencv-dev
+#
+# Build:
+#   make
+#
+# Run:
+#   sudo ./imu_viz          (sudo needed for /dev/spidev access)
+#   OR add your user to the spi group and run without sudo:
+#   sudo usermod -aG spi $USER  (then log out and back in)
 
-# Target executable name
-TARGET = mpu6500_app
+CXX     := g++
+CC      := gcc
+TARGET  := imu_viz
 
-# Source files
-SRCS = main.c spi.c mpu6500.c
+# All source files
+SRCS_CPP := viz_main.cpp
+SRCS_C   := mpu6500.c spi.c
 
-# Object files (automatically generated from SRCS)
-OBJS = $(SRCS:.c=.o)
+OBJS_CPP := $(SRCS_CPP:.cpp=.o)
+OBJS_C   := $(SRCS_C:.c=.o)
+OBJS     := $(OBJS_CPP) $(OBJS_C)
 
-# Header files (for dependency tracking)
-HEADERS = spi.h mpu6500.h mpuRegister.h
+# Flags
+CFLAGS   := -O2 -Wall -Wextra
+CXXFLAGS := -O2 -Wall -Wextra -std=c++17
+OPENCV   := $(shell pkg-config --cflags --libs opencv4 2>/dev/null || \
+                     pkg-config --cflags --libs opencv  2>/dev/null)
 
-# Default rule
-all: $(TARGET)
+ifeq ($(OPENCV),)
+  $(error "OpenCV not found. Run: sudo apt install libopencv-dev")
+endif
 
-# Link object files to create the executable
+LDFLAGS  := $(OPENCV) -lm
+
+# Build rules
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+	$(CXX) $(OBJS) -o $@ $(LDFLAGS)
+	@echo "Build OK → ./$(TARGET)"
 
-# Compile C source files into object files
-# This rule also ensures that if a header changes, the files are recompiled
-%.o: %.c $(HEADERS)
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $(OPENCV) -c $< -o $@
+
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean up build files
 clean:
 	rm -f $(OBJS) $(TARGET)
 
-# Mark rules that don't represent physical files
-.PHONY: all clean
+.PHONY: clean
