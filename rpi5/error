@@ -1,3 +1,41 @@
-.789606] mcp251x spi0.0: MCP251x didn't enter in conf mode after reset
-[    3.789636] mcp251x spi0.0: Probe failed, err=110
-[    3.789640] mcp251x spi0.0: probe with driver mcp251x failed with error -110
+TIMEOUT 30
+DEFAULT JetsonIO
+
+MENU TITLE L4T boot options
+
+LABEL primary
+      MENU LABEL primary kernel
+      LINUX /boot/arducam/Image
+      INITRD /boot/initrd
+      APPEND ${cbootargs} quiet root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 console=ttyS0,115200n8 console=tty0 fbcon=map:0 net.ifnames=0
+
+# When testing a custom kernel, it is recommended that you create a backup of
+# the original kernel and add a new entry to this file so that the device can
+# fallback to the original kernel. To do this:
+#
+# 1, Make a backup of the original kernel
+#      sudo cp /boot/Image /boot/Image.backup
+#
+# 2, Copy your custom kernel into /boot/Image
+#
+# 3, Uncomment below menu setting lines for the original kernel
+#
+# 4, Reboot
+
+# LABEL backup
+#    MENU LABEL backup kernel
+#    LINUX /boot/Image.backup
+#    INITRD /boot/initrd
+#    APPEND ${cbootargs}
+#    APPEND ${cbootargs} quiet root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 console=ttyS0,115200n8 console=tty0 fbcon=map:0 net.ifnames=0
+
+
+LABEL JetsonIO
+        MENU LABEL Custom Header Config: <CSI Camera IMX519 Dual>
+        LINUX /boot/arducam/Image
+        FDT /boot/arducam/dts/tegra210-p3448-0000-p3449-0000-b00-user-custom.dtb
+        INITRD /boot/initrd
+        APPEND ${cbootargs} quiet root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 console=tty0 fbcon=map:0 net.ifnames=0
+
+
+
